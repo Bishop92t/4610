@@ -1,7 +1,4 @@
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -26,9 +23,9 @@ import javax.servlet.http.HttpServletResponse;
 
 public class Review extends HttpServlet {
 	private static final long serialVersionUID = 1L;
-	private String DB_TABLE    = "review";
-	private String DB_NAME     = "crr";
-	private String DB_URL      = "jdbc:mysql://localhost:3306/"+DB_NAME+"?autoReconnect=true&relaxAutoCommit=true";	
+	private static String DB_TABLE    = "review";
+	private static String DB_NAME     = "crr";
+	private static String DB_URL      = "jdbc:mysql://localhost:3306/"+DB_NAME+"?autoReconnect=true&relaxAutoCommit=true";	
 	private Connection conn = null;
 	private Statement  stmt = null;
 	private PrintWriter out;
@@ -46,7 +43,7 @@ public class Review extends HttpServlet {
 		 * If WriteReview.java calls, data will be via cookie
 		 * If IAAS.java or Storage.java calls, data will be via a form post
 		 */
-		String name        = getUserName(request.getCookies());
+		String name        = User.getUserName(request.getCookies());
 		String serviceName = getServiceName(request.getCookies());
 		boolean isStorage  = false;
 		
@@ -62,57 +59,14 @@ public class Review extends HttpServlet {
 		}
 			
 		//display the website template
-		loadTemplate(name);
+		LoadTemplate.loadTemplate(name, out);
 		
-		//connect to the db and read all table rows into array of objects
-		try {
-			//start the table
-			out.println("<div id='wrapper'>"+ 
-						"<table id='keywords' cellspacing=0 cellpadding=0>"+
-						"<thead><tr>\n"+
-					    "<th><span>Name</span></th>\n"+
-					    "<th><span>Review</span></th>\n"+
-			            "<th><span>User</span></th></tr></thead><tr>\n");
-
-			//Open a connection
-			Class.forName("com.mysql.jdbc.Driver");
-			conn = (Connection) DriverManager.getConnection(DB_URL,"root","ilovepizza");
-						
-			//Create and execute a query for either the IaaS or Storage name fields
-			stmt = (Statement) conn.createStatement();
-			String sql = "SELECT * FROM "+DB_TABLE+" WHERE isStorage=FALSE AND iaas_name='"+serviceName+"';";
-			if(isStorage)
-				sql = "SELECT * FROM "+DB_TABLE+" WHERE isStorage=TRUE AND storage_name='"+serviceName+"';";
-			ResultSet rs = (ResultSet) stmt.executeQuery(sql);
-			
-			//print the entire result set in the table
-			while(rs.next()) {
-				//if storage print the storage column
-				if(isStorage)
-					out.println("<td>"+rs.getString("storage_name")+"</td>\n");
-				//else print the iaas column
-				else
-					out.println("<td>"+rs.getString("iaas_name")+"</td>\n");
-				//now print the review text and the users name
-				out.println("<td>"+rs.getString("text")+"</td>\n");
-				out.println("<td>"+rs.getString("login_name")+"</td>\n");
-			}
-			
-			//close out the table tags
-			out.println("</tr></table>");
-			//close all the connections
-	 		if(rs != null)
-	 			rs.close();
-	 		if(stmt != null) 
- 				stmt.close();
-	 		if(conn != null)
-	 			conn.close();
-		}
-		catch (ClassNotFoundException | SQLException e) {
-			e.printStackTrace();
-		}
+		out.println(getReviews(serviceName, isStorage));
 
 		createOrEditReview(name, serviceName, isStorage);
+		
+		//finally close out the html tags and the big page table
+		out.println("</td></tr></table></body></html>");
 	}
 
 	private Boolean createOrEditReview(String name, String serviceName, boolean isStorage) {
@@ -177,70 +131,122 @@ public class Review extends HttpServlet {
  
 		return false;
 	}
+
+	public static String getReviews(String serviceName, boolean isStorage) {
+		//setup the table we'll be working on, the output String and a counter
+		String DB_TABLE    = "review";
+		String userReviews = "";
+		int numUserReviews = 0;
+		       
+		//start the table for the users own reviews 
+		userReviews += "<div id='wrapper'><table id='keywords' cellspacing=0 cellpadding=0>"
+				    +  "<thead><tr>\n";
+		userReviews += "<th><span>Service Name</span></th>\n"
+				    +  "<th><span>User Reviews</span></th>\n"
+				    +  "<th><span>User Name</span></th></tr></thead>\n";
+
+		try {
+			//Open a connection to the database
+			Class.forName("com.mysql.jdbc.Driver");
+			Connection conn = (Connection) DriverManager.getConnection(DB_URL,"root","ilovepizza");
+						
+			//Create and execute a query for all of this users reviews
+			Statement stmt = (Statement) conn.createStatement();
+			String sql;
+			if(isStorage)
+				sql = "SELECT * FROM "+DB_TABLE+" WHERE storage_name='"+serviceName+"';";
+			else
+				sql = "SELECT * FROM "+DB_TABLE+" WHERE iaas_name='"+serviceName+"';";
+				
+			ResultSet rs   = (ResultSet) stmt.executeQuery(sql);
+			
+			//loop through the result set and print in the table
+			while(rs.next()) {
+				numUserReviews++;
+				userReviews += "<tr><td>"+serviceName+"</td>\n"
+						    +  "<td>"+rs.getString("text")+"</td>\n"
+						    +  "<td>"+rs.getString("login_name")+"</td></tr>";
+			}
+			
+			if(numUserReviews==0)
+				userReviews += "<tr><td colspan=3>No Reviews Found</td></tr>\n";
+			
+			//close out the table tags
+			userReviews += "</tr></table>";
+			
+			//close all the connections
+	 		if(rs != null)
+	 			rs.close();
+	 		if(stmt != null) 
+ 				stmt.close();
+	 		if(conn != null)
+	 			conn.close();
+		}
+		catch (ClassNotFoundException | SQLException e) {
+			e.printStackTrace();
+		}
 		
+		return userReviews;
+	}
 	
-	/**
-	 * helper method to make doGet more readable. Load the Head and CSS template, 
-	 *    print the users name in the title, the body template and JS sorting 
-	 *    script, finally print the left side bar
-	 * @param name the users name (passed from the previous page
-	 */
-	private void loadTemplate(String name) {
-		//print the template that contains the head and CSS
-		String printTemplate = "headtemplate.html";
-		InputStream inputStream = getClass().getClassLoader().getResourceAsStream(printTemplate);
-		BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+	public static String getReviews(String userName) {
+		//setup the table we'll be working on, the output String and a counter
+		String DB_TABLE    = "review";
+		String userReviews = "";
+		int numUserReviews = 0;
+		       
+		//start the table for the users own reviews 
+		userReviews += "<div id='wrapper'><table id='keywords' cellspacing=0 cellpadding=0>"
+				    +  "<thead><tr>\n";
+		userReviews += "<th><span>Service Name</span></th>\n"
+				    +  "<th><span>Your Reviews</span></th>\n"
+				    +  "<th><span>Type</span></th></tr></thead><tr>\n";
+		
 		try {
-			while((printTemplate=reader.readLine()) != null)
-				out.println(printTemplate);
-			inputStream.close();
-			reader.close();
-		} catch (IOException e) {
+			//Open a connection to the database
+			Class.forName("com.mysql.jdbc.Driver");
+			Connection conn = (Connection) DriverManager.getConnection(DB_URL,"root","ilovepizza");
+						
+			//Create and execute a query for all of this users reviews
+			Statement stmt = (Statement) conn.createStatement();
+			String sql     = "SELECT * FROM "+DB_TABLE+" WHERE login_name='"+userName+"';";
+			ResultSet rs   = (ResultSet) stmt.executeQuery(sql);
+			
+			//loop through the result set and print in the table
+			while(rs.next()) {
+				numUserReviews++;
+				Boolean isStorage = rs.getBoolean("isStorage");
+				if(isStorage) {
+					userReviews += "<tr><td>"+rs.getString("storage_name")+"</td>\n"
+							    +  "<td>"+rs.getString("text")+"</td>\n"
+							    +  "<td>Storage</td>\n</tr>";
+				}
+				else {
+					userReviews += "<tr><td>"+rs.getString("iaas_name")+"</td>\n"
+								+  "<td>"+rs.getString("text")+"</td>\n"
+								+  "<td>IaaS</td>\n</tr>";
+				}
+			}
+			
+			if(numUserReviews==0)
+				userReviews += "<tr><td colspan=3>No Reviews Found</td></tr>";
+			
+			//close out the table tags
+			userReviews += "</tr></table>";
+			
+			//close all the connections
+	 		if(rs != null)
+	 			rs.close();
+	 		if(stmt != null) 
+ 				stmt.close();
+	 		if(conn != null)
+	 			conn.close();
+		}
+		catch (ClassNotFoundException | SQLException e) {
 			e.printStackTrace();
 		}
 		
-		//Print the title with user name
-		out.println("<title>C R R welcomes you "+name+"</title>");
-		
-		//print the template that contains the body formatting (the sort script)
-		printTemplate="bodytemplate.html";
-		inputStream = getClass().getClassLoader().getResourceAsStream(printTemplate);
-		reader = new BufferedReader(new InputStreamReader(inputStream));
-		try {
-			while((printTemplate=reader.readLine()) != null)
-				out.println(printTemplate);
-			inputStream.close();
-			reader.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		//big table contains all of the user viewable content
-		out.println("<table><tr><td class='bigtable'>");
-
-		//small table for the left side bar
-		out.println("<table>");
-		
-		//left side bar link to the users home
-		out.println("<tr><td><form action='/4610/Home' method='post'>" 
-				  + "<input type='hidden' name='name' value="+name+">"  
-				  + "<input type='image' src='http://52.26.169.0/pictures/logo.jpg' width=200 alt='Submit'>" 
-				  + "</form><br><br><br><br></td></tr>");
-
-		//left side bar link to IAAS
-		out.println("<tr><td><form action='/4610/IAAS' method='post'>"
-				  + "<input type='hidden' name='name' value="+name+">" 
-				  + "<input type='image' src='http://52.26.169.0/pictures/iaas.jpg' width=200 alt='Submit'>"
-				  + "</form><br><br></td></tr>");
-		
-		//left side bar link to Storage and end the small table
-		out.println("<tr><td><form action='/4610/Storage' method='post'>"
-				  + "<input type='image' src='http://52.26.169.0/pictures/storage.jpg' width=200 alt='Submit'>"
-				  + "</form><br><br><br></td></tr></table>");
-		
-		//wrap up the left side bar and start the user content that goes on the right
-		out.println("</td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>");
-		out.println("<td class='bigtable'>");
+		return userReviews;
 	}
 	
 	private String getServiceName(Cookie[] cookies){
@@ -274,24 +280,6 @@ public class Review extends HttpServlet {
 			return true;
 		else
 			return false;
-	}
-	
-	/**
-	 * Pass this helper method an array of cookies and it will attempt to find one that's named CCRLogin
-	 *   signaling that this cookie is the valid login name
-	 * @param cookies an array of cookies from the HttpServletRequest
-	 * @return the value of that named cookie or "" if nothing found
-	 */
-	private String getUserName(Cookie[] cookies){
-		String name = "";
-		
-		//look through the array of cookies for one named CCRLogin
-		if(cookies != null)
-			for(Cookie cookie : cookies) 
-				if(cookie.getName().equals("CCRLogin"))
-					name = cookie.getValue();
-		
-		return name;
 	}
 	
 	/**

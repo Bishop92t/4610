@@ -1,7 +1,4 @@
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -10,7 +7,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -42,10 +38,10 @@ public class Storage extends HttpServlet {
 		out=response.getWriter();
 		
 		//get the users login name
-		String name = getUserName(request.getCookies());
+		String name = User.getUserName(request.getCookies());
 		
 		//display the website template
-		loadTemplate(name);
+		LoadTemplate.loadTemplate(name, out);
 		
 		//chose which db table to load and init the storage object counter
 		String DB_TABLE = "storage";
@@ -140,70 +136,6 @@ public class Storage extends HttpServlet {
 
 		//finally close out the html tags
 		out.println("</td></tr></table></body></html>");
-	}
-	
-	/**
-	 * helper method to make doGet more readable. Load the Head and CSS template, 
-	 *    print the users name in the title, the body template and JS sorting 
-	 *    script, finally print the left side bar
-	 * @param name the users name (passed from the previous page
-	 */
-	private void loadTemplate(String name) {
-		//print the template that contains the head and CSS
-		String printTemplate = "headtemplate.html";
-		InputStream inputStream = getClass().getClassLoader().getResourceAsStream(printTemplate);
-		BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-		try {
-			while((printTemplate=reader.readLine()) != null)
-				out.println(printTemplate);
-			inputStream.close();
-			reader.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		//Print the title with user name
-		out.println("<title>C R R welcomes you "+name+"</title>");
-		
-		//print the template that contains the body formatting (the sort script)
-		printTemplate="bodytemplate.html";
-		inputStream = getClass().getClassLoader().getResourceAsStream(printTemplate);
-		reader = new BufferedReader(new InputStreamReader(inputStream));
-		try {
-			while((printTemplate=reader.readLine()) != null)
-				out.println(printTemplate);
-			inputStream.close();
-			reader.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		//big table contains all of the user viewable content
-		out.println("<table><tr><td class='bigtable'>");
-
-		//small table for the left side bar
-		out.println("<table>");
-		
-		//left side bar link to the users home
-		out.println("<tr><td><form action='/4610/Home' method='post'>" 
-				  + "<input type='hidden' name='name' value="+name+">"  
-				  + "<input type='image' src='http://52.26.169.0/pictures/logo.jpg' width=200 alt='Submit'>" 
-				  + "</form><br><br><br><br></td></tr>");
-
-		//left side bar link to IAAS
-		out.println("<tr><td><form action='/4610/IAAS' method='post'>"
-				  + "<input type='hidden' name='name' value="+name+">" 
-				  + "<input type='image' src='http://52.26.169.0/pictures/iaas.jpg' width=200 alt='Submit'>"
-				  + "</form><br><br></td></tr>");
-		
-		//left side bar link to Storage and end the small table
-		out.println("<tr><td><form action='/4610/Storage' method='post'>"
-				  + "<input type='image' src='http://52.26.169.0/pictures/storage.jpg' width=200 alt='Submit'>"
-				  + "</form><br><br><br></td></tr></table>");
-		
-		//wrap up the left side bar and start the user content that goes on the right
-		out.println("</td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>");
-		out.println("<td class='bigtable'>");
 	}
 	
 	/**
@@ -344,24 +276,6 @@ public class Storage extends HttpServlet {
 				temp+=osNameAndVer[i]+", ";
 			return temp+osNameAndVer[numOs];
 		}
-	}
-
-	/**
-	 * Pass this helper method an array of cookies and it will attempt to find one that's named CCRLogin
-	 *   signaling that this cookie is the valid login name
-	 * @param cookies an array of cookies from the HttpServletRequest
-	 * @return the value of that named cookie or "" if nothing found
-	 */
-	private String getUserName(Cookie[] cookies){
-		String name = "";
-		
-		//look through the array of cookies for one named CCRLogin
-		if(cookies != null)
-			for(Cookie cookie : cookies) 
-				if(cookie.getName().equals("CCRLogin"))
-					name = cookie.getValue();
-		
-		return name;
 	}
 	
     /**
