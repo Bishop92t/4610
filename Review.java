@@ -38,12 +38,16 @@ public class Review extends HttpServlet {
 		response.setContentType("text/html;charset=UTF-8");
 		request.setCharacterEncoding("UTF-8");
 		out=response.getWriter();
+
+		//get the users login name, boot them to login screen if they aren't logged in
+		String name = User.getUserName(request.getCookies());
+		if(name.equals(""))
+			response.sendRedirect("http://52.26.169.0/4610.html");
 		
 		/**
 		 * If WriteReview.java calls, data will be via cookie
 		 * If IAAS.java or Storage.java calls, data will be via a form post
 		 */
-		String name        = User.getUserName(request.getCookies());
 		String serviceName = getServiceName(request.getCookies());
 		boolean isStorage  = false;
 		
@@ -138,10 +142,11 @@ public class Review extends HttpServlet {
 		String userReviews = "";
 		int numUserReviews = 0;
 		       
-		//start the table for the users own reviews 
-		userReviews += "<div id='wrapper'><table id='keywords' cellspacing=0 cellpadding=0>"
-				    +  "<thead><tr>\n";
-		userReviews += "<th><span>Service Name</span></th>\n"
+		//start the string with the correct image
+		userReviews += "<div id='wrapper'><img src='http://52.26.169.0/pictures/"+serviceName+".png' class='center'><br>\n";
+		
+		userReviews += "<table id='keywords' cellspacing=0 cellpadding=0><thead><tr>\n"
+				    +  "<th><span>Service Name</span></th>\n"
 				    +  "<th><span>User Reviews</span></th>\n"
 				    +  "<th><span>User Name</span></th></tr></thead>\n";
 
@@ -163,9 +168,9 @@ public class Review extends HttpServlet {
 			//loop through the result set and print in the table
 			while(rs.next()) {
 				numUserReviews++;
-				userReviews += "<tr><td>"+serviceName+"</td>\n"
-						    +  "<td>"+rs.getString("text")+"</td>\n"
-						    +  "<td>"+rs.getString("login_name")+"</td></tr>";
+				userReviews += "<tr><td class='littletable'>"+serviceName+"</td>\n"
+						    +  "<td class='littletable'>"+rs.getString("text")+"</td>\n"
+						    +  "<td class='littletable'>"+rs.getString("login_name")+"</td></tr>";
 			}
 			
 			if(numUserReviews==0)
@@ -193,11 +198,12 @@ public class Review extends HttpServlet {
 		//setup the table we'll be working on, the output String and a counter
 		String DB_TABLE    = "review";
 		String userReviews = "";
+		String serviceName = "";
 		int numUserReviews = 0;
 		       
 		//start the table for the users own reviews 
 		userReviews += "<div id='wrapper'><table id='keywords' cellspacing=0 cellpadding=0>"
-				    +  "<thead><tr>\n";
+				    +  "<thead><tr><th>&nbsp;</th>\n";
 		userReviews += "<th><span>Service Name</span></th>\n"
 				    +  "<th><span>Your Reviews</span></th>\n"
 				    +  "<th><span>Type</span></th></tr></thead><tr>\n";
@@ -216,16 +222,16 @@ public class Review extends HttpServlet {
 			while(rs.next()) {
 				numUserReviews++;
 				Boolean isStorage = rs.getBoolean("isStorage");
-				if(isStorage) {
-					userReviews += "<tr><td>"+rs.getString("storage_name")+"</td>\n"
-							    +  "<td>"+rs.getString("text")+"</td>\n"
-							    +  "<td>Storage</td>\n</tr>";
-				}
-				else {
-					userReviews += "<tr><td>"+rs.getString("iaas_name")+"</td>\n"
-								+  "<td>"+rs.getString("text")+"</td>\n"
-								+  "<td>IaaS</td>\n</tr>";
-				}
+				if(isStorage) 
+					serviceName = rs.getString("storage_name");
+				else
+					serviceName = rs.getString("iaas_name");
+				
+				userReviews += "<tr><td><img src='http://52.26.169.0/pictures/"+serviceName+".png' class='tinyimage'></td>\n"
+							+  "<td class='littletable'>"+serviceName+"</td>\n"
+							+  "<td class='littletable'>"+rs.getString("text")+"</td>\n"
+							+  "<td class='littletable'>Storage</td>\n</tr>";
+				
 			}
 			
 			if(numUserReviews==0)

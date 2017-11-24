@@ -2,7 +2,7 @@
 <!doctype html public \"-//w3c//dtd html 4.0 transitional//en\">
 <html lang="en">
 <head>
-<title id='titleBarText'></title>
+
 <meta name="google" content="notranslate">
 <meta http-equiv="Content-Language" content="en">
 
@@ -133,22 +133,6 @@ h1 {
 	width:600px;
 }
 
-.littletable {
-	vertical-align: middle;
-	text-align: middle;
-}
-
-.tinyimage {
-	display: block;
-	margin: auto;
-	width: 75%;
-}
-
-.center {
-	display: block;
-	margin: auto;
-}
-
 #keywords {
   	margin: 0 auto;
   	font-size: 1.2em;
@@ -218,20 +202,16 @@ h1 {
 
 	<tr><td><form action='/4610/Home' method='post'>
 	<input type='hidden' name='name' value="+name+">
-	<input type='image' src='http://52.26.169.0/pictures/logo.jpg' width=200 alt='Home'>
+	<input type='image' src='http://52.26.169.0/pictures/logo.jpg' width=200 alt='Submit'>
 	</form><br><br><br><br></td></tr>
 
 	<tr><td><form action='/4610/IAAS' method='post'>
 	<input type='hidden' name='name' value="+name+">
-	<input type='image' src='http://52.26.169.0/pictures/iaas.jpg' width=200 alt='IaaS'>
+	<input type='image' src='http://52.26.169.0/pictures/iaas.jpg' width=200 alt='Submit'>
 	</form><br><br></td></tr>
 
 	<tr><td><form action='/4610/Storage' method='post'>
-	<input type='image' src='http://52.26.169.0/pictures/storage.jpg' width=200 alt='storage'>
-	</form><br><br><br></td></tr>
-	
-	<tr><td><form action='/4610/User' method='post'>
-	<input type='image' src='http://52.26.169.0/pictures/logout.png' width=200 alt='Logout'>
+	<input type='image' src='http://52.26.169.0/pictures/storage.jpg' width=200 alt='Submit'>
 	</form><br><br><br></td></tr>
 
     </table>
@@ -241,4 +221,46 @@ h1 {
   <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
 
   <td class='bigtable'>
+    <div id='dynamic'>
+	<p style="text-align:center;"><img src="http://52.26.169.0/pictures/logo.jpg"></p>
+
+  <h2>Sign up, it's free!</h2>
+	<form action="http://52.24.2.46:8080/4610/SignUp" method="post">
+	  <table>
+	    <tr><td><label>Name or Nickname:</label></td>
+	    	<td><input name="name" type="text" id="Name or Nickname:"></td>
+	    </tr>
+	    <tr><td><label>Email Address:</label></td>
+	    	<td><input name="email" type="email" id="Email Address:"></td>
+	    </tr>
+	    <tr><td><label>Desired Password:</label></td>
+	    	<td><input name="password" type="password" id="Desired Password:"></td>
+	    </tr>
+	    <tr><td></td>
+	    	<td id="right"><button type="submit">Sign Up</button></td>
+	    </tr>
+	  </table>
+  	</form>
   
+  <br><br><br><br><br><br>
+  
+	<div id="existing">
+	  <form action="http://52.24.2.46:8080/4610/Login" method="post">
+	  	<table>
+	    	<tr><td>Existing User Name:</td>
+	    		<td>Password:</td>
+	    		<td></td>
+	    	</tr>
+	    	<tr><td><label><input name="name" type="text"></label></td>
+	    		<td><label><input name="password" type="password"></label></td>
+	    		<td><button type="submit">Login</button></td>
+	    	</tr>
+	    </table>	
+	  </form>
+	</div>
+
+
+  </td></tr>
+</table>
+
+</body></html>

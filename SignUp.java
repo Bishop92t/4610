@@ -41,6 +41,10 @@ public class SignUp extends HttpServlet {
 		String pass  = request.getParameter("password");
 		String email = request.getParameter("email");
 		
+		//if the user has already registered with that email, boot them to login screen
+		if(User.isExistingUserEmail(email))
+			response.sendRedirect("http://52.26.169.0/4610.html");
+		
 		//db setup
 		String DB_TABLE = "login";
 		String DB_NAME  = "crr";

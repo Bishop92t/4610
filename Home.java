@@ -28,10 +28,11 @@ public class Home extends HttpServlet {
 		response.setContentType("text/html;charset=UTF-8");
 		out=response.getWriter();
 
-		//get the users login name
+		//get the users login name, boot them to login screen if they aren't logged in
 		String name = User.getUserName(request.getCookies());
-//todo important: if login cookie isn't valid boot the user to the login screen
-		
+		if(name.equals(""))
+			response.sendRedirect("http://52.26.169.0/4610.html");
+
 		//display the website template
 		LoadTemplate.loadTemplate(name, out);
 		

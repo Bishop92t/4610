@@ -1,6 +1,7 @@
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -21,11 +22,12 @@ import javax.servlet.http.HttpServletResponse;
 
 public class WriteReview extends HttpServlet {
 	private static final long serialVersionUID = 1L;
-	private static String DB_TABLE = "review";
-	private static String DB_NAME  = "crr";
-	private static String DB_URL   = "jdbc:mysql://localhost:3306/"+DB_NAME+"?autoReconnect=true&relaxAutoCommit=true";
-	private static Connection conn = null;
-	private static Statement stmt  = null;
+	private static String DB_TABLE         = "review";
+	private static String DB_NAME          = "crr";
+	private static String DB_URL           = "jdbc:mysql://localhost:3306/"+DB_NAME+"?autoReconnect=true&relaxAutoCommit=true";
+	private static PreparedStatement pstmt = null;
+	private static Connection conn         = null;
+	private static Statement stmt          = null;
 	
 	/**
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
@@ -42,30 +44,36 @@ public class WriteReview extends HttpServlet {
 		String hasExisitingRecord = request.getParameter("hasExistingRecord");
 
 		try {
-			//open a connection and prepare the sql statement variables
+			//open a connection to the database
 			Class.forName("com.mysql.jdbc.Driver");
 			conn=(Connection) DriverManager.getConnection(DB_URL,"root","ilovepizza");
-			String sql;
 			
 			//if user already left a review for this service, delete old record 
 			if(hasExisitingRecord.equals("true")) 
 				deleteOldReview(serviceType, serviceName, name);
 
-			//create the statement to write the data to the database
-			sql = "INSERT INTO "+DB_TABLE+" VALUES ('"+name+"','"+reviewText+"',";
-
-			if(serviceType.equals("storage"))
-				sql += "TRUE,'','"+serviceName+"');";
-			else
-				sql += "FALSE,'"+serviceName+"','');";
-
-System.out.println(sql);
-
 			//taking a performance hit with prepareStatement to sanitize inputs
-			stmt=(Statement) conn.prepareStatement(sql);
-			stmt.executeUpdate(sql);
+			String sql = "INSERT INTO "+DB_TABLE+" VALUES (?, ?, ?, ?, ?)";
+			pstmt = conn.prepareStatement(sql);
+
+			pstmt.setString(1, name);
+			pstmt.setString(2, reviewText);
+			
+			if(serviceType.equals("storage")) {
+				pstmt.setBoolean(3, true);
+				pstmt.setString(4, "");
+				pstmt.setString(5, serviceName);
+			}
+			else{
+				pstmt.setBoolean(3, false);
+				pstmt.setString(4, serviceName);
+				pstmt.setString(5, "");
+			}
+
+			//finally write the update to the db
+			pstmt.executeUpdate();
 			conn.commit();
-		} catch (ClassNotFoundException | SQLException e) {
+		} catch (SQLException | ClassNotFoundException e) {
 			e.printStackTrace();
 		} finally {
 			//finally, attempt close the connection
@@ -119,7 +127,7 @@ System.out.println(sql);
 		//try to execute the statement
 		try {
 System.out.println(sql);
-		//taking a performance hit with prepareStatement to sanitize inputs
+		
 		stmt=(Statement) conn.createStatement();
 		stmt.executeUpdate(sql);
 		conn.commit();
