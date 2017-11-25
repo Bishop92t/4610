@@ -4,7 +4,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.PreparedStatement;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
@@ -59,14 +59,12 @@ public class Login extends HttpServlet {
 			pstmt.setString(2, passInput);
 
 			//now execute the sanitized query
-			ResultSet rs = pstmt.executeQuery(sql);			
+			ResultSet rs = pstmt.executeQuery();			
 			
 			//if a match is found, the user has typed in the correct password
 			if(rs.next()){
-			 	if(name.equals(nameInput) && password.equals(passInput)) {
-			 		message   = "thanks for logging in.";
-			 		foundName = true;
-			 	}
+			 	message   = "thanks for logging in.";
+			 	foundName = true;
 			}
 
 			//close all the connections
@@ -82,7 +80,7 @@ public class Login extends HttpServlet {
 		}
 
 		//send true if the username was found (otherwise send false), and the users name
- 		messageUserThenRedirectHome(foundName, name);
+ 		messageUserThenRedirectHome(foundName, nameInput, message, response);
 	}
 
 	/*
@@ -92,10 +90,10 @@ public class Login extends HttpServlet {
 	 * @param name the name of the user
 	 * @param message the message to send the user before redirecting them
 	 */
-	public static void messageUserThenRedirectHome(boolean isValidLogin, String name, String message) {
+	public static void messageUserThenRedirectHome(boolean isValidLogin, String name, String message, HttpServletResponse response) throws IOException {
 		//set the file type, print writer, and declare the document html type
 		response.setContentType("text/html;charset=UTF-8");
-		final PrintWriter out=response.getWriter();
+		PrintWriter out=response.getWriter();
 		String docType="<!doctype html public \"-//w3c//dtd html 4.0 transitional//en\">\n";
 		
 		//create the first bit of html to be displayed
@@ -111,7 +109,7 @@ public class Login extends HttpServlet {
 
  			//add the cookie to the response returned to the client
 			response.addCookie(loginCookie);
-			response.setHeader("Refresh", "5; URL=http://52.24.2.46:8080/4610/home");
+			response.setHeader("Refresh", "5; URL=http://52.24.2.46:8080/4610/Home");
  		}
  		//else send them to the login screen
  		else

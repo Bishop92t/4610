@@ -50,6 +50,10 @@ public class IAAS extends HttpServlet {
 		String DB_TABLE = "iaas";
 		int counter     = 0;
 
+		//initialize the array of IaaS objects and a temp variable for the providers name
+		Iaas[] iaas = new Iaas[100];
+		String tempProviderName;
+		
 		try {
 			//Open a connection
 			Class.forName("com.mysql.jdbc.Driver");
@@ -75,10 +79,6 @@ public class IAAS extends HttpServlet {
 					  + "<th><span>Max Storage</span></th>"
 					  + "<th><span>Has GPU</span></th>"
 					  + "<th><span>Operating Systems</span></th></tr></thead>");
-			
-			//initialize the array of IaaS objects and a temp variable for the providers name
-			Iaas[] iaas = new Iaas[100];
-			String tempProviderName;
 			
 			//load all the results into an array of IaaS objects
 			while(rs.next()) {

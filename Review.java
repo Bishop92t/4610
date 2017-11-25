@@ -96,9 +96,9 @@ public class Review extends HttpServlet {
 			stmt = (Statement) conn.createStatement();
 			
 			//look for any reviews from this user for this service name
-			String sql = "SELECT * FROM "+DB_TABLE+" WHERE login_name='"+name+"'"
-					   + "AND storage_name='"+serviceName+"'"
-					   + "OR iaas_name='"+serviceName+"';";
+			String sql = "SELECT * FROM "+DB_TABLE+" WHERE login_name='"+name+"' "
+					   + "AND (storage_name='"+serviceName+"' "
+					   + "OR iaas_name='"+serviceName+"');";
 
 			//now execute the query into a resultset
 			ResultSet rs = (ResultSet) stmt.executeQuery(sql);

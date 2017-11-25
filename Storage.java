@@ -50,6 +50,10 @@ public class Storage extends HttpServlet {
 		//chose which db table to load and init the storage object counter
 		String DB_TABLE = "storage";
 		int counter     = 0;
+		
+		//initialize the array of Storage Provider objects
+		CloudStorageProvider[] cloudStorageProvider = new CloudStorageProvider[100];
+		String temp;
 
 		//connect to the db and read all table rows into array of objects
 		try {
@@ -75,10 +79,6 @@ public class Storage extends HttpServlet {
 					  + "<th><span>Min Storage</span></th>"
 					  + "<th><span>Max Storage</span></th>"
 					  + "<th><span>Operating Systems</span></th></tr></thead>");
-			
-			//initialize the array of Storage Provider objects
-			CloudStorageProvider[] cloudStorageProvider = new CloudStorageProvider[100];
-			String temp;
 
 			//load all the results into an array of Storage Provider objects
 			while(rs.next()) {
@@ -120,7 +120,7 @@ public class Storage extends HttpServlet {
 		}
 		//Loop through the array of storage provider objects and print each one in the HTML table
 		for(int i=0; i<counter; i++) 
-			out.println("<tr><td>"+
+			out.println("<tr><td>"
 					  + "<form action='/4610/Review' method='post'>"
 					  + "<input type='hidden' name='name' value="+name+">"
 					  + "<input type='hidden' name='isStorage' value='true'>"

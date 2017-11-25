@@ -10,6 +10,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.sql.PreparedStatement;
 
 /**
  * @author Nathanael Bishop 
@@ -108,7 +109,7 @@ public class User extends HttpServlet {
 			pstmt.setString(1, email);
 
 			//now execute the sanitized query
-			ResultSet rs = pstmt.executeQuery(sql);
+			ResultSet rs = pstmt.executeQuery();
 			
 			//if there were any results the user was found, set return value to true
 			if(rs.next())

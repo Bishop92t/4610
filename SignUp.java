@@ -1,9 +1,8 @@
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.PreparedStatement;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -33,8 +32,11 @@ public class SignUp extends HttpServlet {
 		String email = request.getParameter("email");
 		
 		//if the user has already registered with that email, boot them to login screen
-		if(User.isExistingUserEmail(email))
-			Login.messageUserThenRedirectHome(false, name, "that email has already been used.");
+		boolean userEmailExists = false;
+		if(User.isExistingUserEmail(email)) {
+			Login.messageUserThenRedirectHome(false, name, "that email has already been used.", response);
+			userEmailExists = true;
+		}
 		
 		//database variables setup, note when writing to DB the DB_URL is different
 		String DB_TABLE = "login";
@@ -45,41 +47,42 @@ public class SignUp extends HttpServlet {
 		Connection        conn = null;
 		PreparedStatement pstm = null;
 
-		//try to write the data and close the connection
-		try {
-			//open a connection
-			Class.forName("com.mysql.jdbc.Driver");
-			conn = (Connection) DriverManager.getConnection(DB_URL,"root","ilovepizza");
-
-			//create the statement to write the data to the database
-			String sql = "INSERT INTO "+DB_TABLE+"(name, password, email) VALUES (?, ?, ?);";
-			pstm = conn.prepareStatement(sql);
-
-			//sanitize the input: name, password and email
-			pstm.setString(1, name);
-			pstm.setString(2, password);
-			pstm.setString(3, email);
-
-			//send that statement to the db and commit
-			pstm.executeUpdate(sql);
-			conn.commit();
-			
-		} catch (ClassNotFoundException | SQLException e) {
-			e.printStackTrace();
-		} finally {
-			//finally, attempt close the connection
+		if(!userEmailExists) {
+			//try to write the data and close the connection
 			try {
-				if(pstm!=null)
-					conn.close();
-				if(conn!=null)
-					conn.close();
-			} catch (SQLException e) {
+				//open a connection
+				Class.forName("com.mysql.jdbc.Driver");
+				conn = (Connection) DriverManager.getConnection(DB_URL,"root","ilovepizza");
+	
+				//create the statement to write the data to the database
+				String sql = "INSERT INTO "+DB_TABLE+"(name, password, email) VALUES (?, ?, ?);";
+				pstm = conn.prepareStatement(sql);
+	
+				//sanitize the input: name, password and email
+				pstm.setString(1, name);
+				pstm.setString(2, pass);
+				pstm.setString(3, email);
+	
+				//send that statement to the db and commit
+				pstm.executeUpdate();
+				conn.commit();
+				
+			} catch (ClassNotFoundException | SQLException e) {
 				e.printStackTrace();
+			} finally {
+				//finally, attempt close the connection
+				try {
+					if(pstm!=null)
+						conn.close();
+					if(conn!=null)
+						conn.close();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
 			}
+			//print out a message for the user that their account was created and then redirect them to the home page 
+			Login.messageUserThenRedirectHome(true, name, "welcome to CRR.", response);
 		}
-
-		//print out a message for the user that their account was created and then redirect them to the home page 
-		Login.messageUserThenRedirectHome(true, name, "welcome to CRR.");
 	}
 	
 	/**
