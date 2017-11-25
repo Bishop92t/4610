@@ -26,9 +26,73 @@ public class Login extends HttpServlet {
 
     /**
 	 * Using information from a html form post, attempt to load a user's info
-	 *   from the mysql server. If found display it, otherwise inform user.
+	 *   from the mysql server. 
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		
+		// database URL, and init connection/statement
+		String DB_TABLE         = "login";
+		String DB_NAME          = "crr";
+		String DB_URL           = "jdbc:mysql://localhost:3306/"+DB_NAME;
+		Connection conn         = null;
+		PreparedStatement pstmt = null;
+		
+		//get the name & password from the HTML form 
+		String nameInput=request.getParameter("name");
+		String passInput=request.getParameter("password");
+		
+		//default message and login status variables
+		String message = "user name and password not found.";
+		boolean foundName = false;
+
+		try {
+			//Open a connection
+			Class.forName("com.mysql.jdbc.Driver");
+			conn = (Connection) DriverManager.getConnection(DB_URL,"root","ilovepizza");
+	
+			//Create a query using preparedStatement to sanitize inputs
+			String sql   = "SELECT * FROM "+DB_TABLE+" where name=? AND password=?;";
+			pstmt        = conn.prepareStatement(sql);
+
+			//sanitize the name and password inputs
+			pstmt.setString(1, nameInput);
+			pstmt.setString(2, passInput);
+
+			//now execute the sanitized query
+			ResultSet rs = pstmt.executeQuery(sql);			
+			
+			//if a match is found, the user has typed in the correct password
+			if(rs.next()){
+			 	if(name.equals(nameInput) && password.equals(passInput)) {
+			 		message   = "thanks for logging in.";
+			 		foundName = true;
+			 	}
+			}
+
+			//close all the connections
+	 		if(rs != null)
+	 			rs.close();
+	 		if(pstmt != null) 
+ 				pstmt.close();
+	 		if(conn != null)
+	 			conn.close();
+		}
+		catch (ClassNotFoundException | SQLException e) {
+			e.printStackTrace();
+		}
+
+		//send true if the username was found (otherwise send false), and the users name
+ 		messageUserThenRedirectHome(foundName, name);
+	}
+
+	/*
+	 * Print the message String for the user and then either create their login token or boot them back
+	 *   to the login screen.
+	 * @param isValidLogin true if the user has succesfully logged in, otherwise false
+	 * @param name the name of the user
+	 * @param message the message to send the user before redirecting them
+	 */
+	public static void messageUserThenRedirectHome(boolean isValidLogin, String name, String message) {
 		//set the file type, print writer, and declare the document html type
 		response.setContentType("text/html;charset=UTF-8");
 		final PrintWriter out=response.getWriter();
@@ -36,67 +100,22 @@ public class Login extends HttpServlet {
 		
 		//create the first bit of html to be displayed
 		out.println(docType + "<html><head><title>User Login</title></head><body>\n");
-		
-		// database URL, and init connection/statement
-		String DB_TABLE    = "login";
-		String DB_NAME     = "crr";
-		String DB_URL      = "jdbc:mysql://localhost:3306/"+DB_NAME;
-		Connection conn = null;
-		Statement  stmt = null;
-		
-		//get the name & password from the HTML form and setup a success/fail var
-		String nameInput=request.getParameter("name");
-		String passInput=request.getParameter("password");
-		Boolean foundName=false;
-		
-		//declare the SQL variables
-		String name, password;
-		
-		//try to connect to db and search for the user
-		try {
-			//Open a connection
-			Class.forName("com.mysql.jdbc.Driver");
-			conn = (Connection) DriverManager.getConnection(DB_URL,"root","ilovepizza");
-	
-			//Create a query
-			stmt = (Statement) conn.createStatement();
-			String sql = "SELECT * FROM "+DB_TABLE+";";
-			ResultSet rs = (ResultSet) stmt.executeQuery(sql);			
-			
-			//look through result set for the user's name and password
-			while(rs.next()){
-				//Retrieve by column name (from the SQL server)
-				name     = rs.getString("name");
-				password = rs.getString("password");
-				
-				//if we find a match, print it
-			 	if(name.equals(nameInput) && password.equals(passInput)) { 
-			 		foundName=true;
-			 		//create the login token cookie
-			 		Cookie loginCookie = new Cookie ("CCRLogin", name);
-			 		loginCookie.setMaxAge(60 * 60);
 
-			 		//add the cookie to the response returned to the client
-			 		response.addCookie(loginCookie);
-			 		response.sendRedirect("Home");
-			 	}
-			}
-			//close all the connections
-	 		if(rs != null)
-	 			rs.close();
-	 		if(stmt != null) 
- 				stmt.close();
-	 		if(conn != null)
-	 			conn.close();
-System.out.println("closed connection in login");	 		
+		out.println("<h2>"+name+", "+message+" You're being redirected shortly</h2>\n");
 
-	 		//if no name match, inform the user and give a way back
-			if(!foundName)
-				out.println("<h1>Incorrect name or password!</h1><a href='MainPage.html'>Go Back</a>");
-		}
-		catch (ClassNotFoundException | SQLException e) {
-			e.printStackTrace();
-		}
+		//if the login is valid, create a login cookie and send user to the home page
+		if(isValidLogin) {
+			//create the login token cookie
+			Cookie loginCookie = new Cookie ("CCRLogin", name);
+			loginCookie.setMaxAge(60 * 60);
+
+ 			//add the cookie to the response returned to the client
+			response.addCookie(loginCookie);
+			response.setHeader("Refresh", "5; URL=http://52.24.2.46:8080/4610/home");
+ 		}
+ 		//else send them to the login screen
+ 		else
+			response.setHeader("Refresh", "5; URL=http://52.26.169.0/4610.html");
 
 		//finally close out the html tags
 		out.println("</body></html>");

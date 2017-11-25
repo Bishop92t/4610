@@ -22,6 +22,7 @@ import javax.servlet.http.HttpServletResponse;
 
 public class WriteReview extends HttpServlet {
 	private static final long serialVersionUID = 1L;
+	//database variables setup, note when writing to DB the DB_URL is different
 	private static String DB_TABLE         = "review";
 	private static String DB_NAME          = "crr";
 	private static String DB_URL           = "jdbc:mysql://localhost:3306/"+DB_NAME+"?autoReconnect=true&relaxAutoCommit=true";
@@ -30,7 +31,7 @@ public class WriteReview extends HttpServlet {
 	private static Statement stmt          = null;
 	
 	/**
-	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
+	 * Servlet accepts a users new or edited review and makes the neccessary changes to the database
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		response.setContentType("text/html;charset=UTF-8");
@@ -56,21 +57,24 @@ public class WriteReview extends HttpServlet {
 			String sql = "INSERT INTO "+DB_TABLE+" VALUES (?, ?, ?, ?, ?)";
 			pstmt = conn.prepareStatement(sql);
 
+			//sanitize the name and reviewText inputs
 			pstmt.setString(1, name);
 			pstmt.setString(2, reviewText);
 			
+			//if the service is a Storage type indicate in the db and store serviceName
 			if(serviceType.equals("storage")) {
 				pstmt.setBoolean(3, true);
 				pstmt.setString(4, "");
 				pstmt.setString(5, serviceName);
 			}
+			//else indicate the service is an IaaS type and store the serviceName
 			else{
 				pstmt.setBoolean(3, false);
 				pstmt.setString(4, serviceName);
 				pstmt.setString(5, "");
 			}
 
-			//finally write the update to the db
+			//now write the update to the db
 			pstmt.executeUpdate();
 			conn.commit();
 		} catch (SQLException | ClassNotFoundException e) {
@@ -87,23 +91,24 @@ public class WriteReview extends HttpServlet {
 			}
 		}
 
-		//store the relevant data in a cookie and send user back to Review
+		//create a cookie for the serviceName and one for the boolean isStorage
 		Cookie servcCookie;
 		Cookie isStorageCookie;
-		
 		servcCookie = new Cookie("CCRserviceName", serviceName);
 		if(serviceType.equals("storage"))
 			isStorageCookie = new Cookie("CCRisStorage", "true");
 		else
 			isStorageCookie = new Cookie("CCRisStorage", "false");
 		
-		//set both cookies to live for only 10 seconds
+		//cookies only need to live long enough for Review to read what provider the user was looking at
 		isStorageCookie.setMaxAge(10); 
 		servcCookie.setMaxAge(10); 
 
  		//add the cookie to the response returned to the client
  		response.addCookie(servcCookie);
  		response.addCookie(isStorageCookie);
+
+ 		//return the user to the Review page for the product they just reviewed
  		response.sendRedirect("Review");
 	}
 
@@ -126,25 +131,23 @@ public class WriteReview extends HttpServlet {
 		
 		//try to execute the statement
 		try {
-System.out.println(sql);
-		
-		stmt=(Statement) conn.createStatement();
-		stmt.executeUpdate(sql);
-		conn.commit();
+			stmt=(Statement) conn.createStatement();
+			stmt.executeUpdate(sql);
+			conn.commit();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
 	}
 	
 	/**
-     * @see HttpServlet#HttpServlet()
-     */
+	 * boilerplate servlet code
+	 */
     public WriteReview() {
         super();
     }
 
 	/**
-	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
+	 * boilerplate servlet code
 	 */
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		doGet(request,response);

@@ -23,15 +23,16 @@ import javax.servlet.http.HttpServletResponse;
 
 public class Review extends HttpServlet {
 	private static final long serialVersionUID = 1L;
-	private static String DB_TABLE    = "review";
-	private static String DB_NAME     = "crr";
-	private static String DB_URL      = "jdbc:mysql://localhost:3306/"+DB_NAME+"?autoReconnect=true&relaxAutoCommit=true";	
-	private Connection conn = null;
-	private Statement  stmt = null;
+	private static String DB_TABLE = "review";
+	private static String DB_NAME  = "crr";
+	private static String DB_URL   = "jdbc:mysql://localhost:3306/"+DB_NAME+"?autoReconnect=true&relaxAutoCommit=true";	
+	private Connection conn        = null;
+	private Statement  stmt        = null;
 	private PrintWriter out;
 	
 	/**
-	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
+	 * This servlet lets the user see other users review of a specific service provider as well as write or edit their
+	 *   own reviews.
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		//set the file type and print writer
@@ -65,14 +66,26 @@ public class Review extends HttpServlet {
 		//display the website template
 		LoadTemplate.loadTemplate(name, out);
 		
+		//display all the reviews in an HTML table
 		out.println(getReviews(serviceName, isStorage));
 
+		//display the users past review if they have any, otherwise give them a blank form 
 		createOrEditReview(name, serviceName, isStorage);
 		
 		//finally close out the html tags and the big page table
 		out.println("</td></tr></table></body></html>");
 	}
 
+	/**
+	 * Display an HTML form the user can interact with. They can see their past review of this
+	 *   specific provider and edit it if they wish, or they will see a blank form they can 
+	 *   use to write a new review.
+	 * Note, user input sanitization is handled by WriteReview.doGet()  This method only reads
+	 *   from the db using already sanitized user input.
+	 * @param name the user who's adding or editing a review
+	 * @param serviceName the service providers name
+	 * @param isStorage true if this provider is Storage based, false if IaaS
+	 */
 	private Boolean createOrEditReview(String name, String serviceName, boolean isStorage) {
 		try {
 			//Open a connection
@@ -104,7 +117,6 @@ public class Review extends HttpServlet {
 			else
 				out.println("<input type='hidden' name='serviceType' value='iaas'>\n");
 			
-			
 			//if user has left a review put it in the form for editing
 			out.println("<textarea name='reviewText' class='bigtextbox' maxlength='250'>");
 			if(rs.next()) { 
@@ -132,10 +144,18 @@ public class Review extends HttpServlet {
 		catch (ClassNotFoundException | SQLException e) {
 			e.printStackTrace();
 		}
- 
+
+ 		//this is for future use, true/false value does nothing currently
 		return false;
 	}
 
+	/**
+	 * Retrieve all the reviews that have been left for this particular service provider.
+	 *   Data will be returned as a self contained HTML table
+	 * @param serviceName the service providers name
+	 * @param isStorage true if the service provider is storage based, false if IaaS
+	 * @return the HTML table containing all the reviews, as a String
+	 */
 	public static String getReviews(String serviceName, boolean isStorage) {
 		//setup the table we'll be working on, the output String and a counter
 		String DB_TABLE    = "review";
@@ -145,6 +165,7 @@ public class Review extends HttpServlet {
 		//start the string with the correct image
 		userReviews += "<div id='wrapper'><img src='http://52.26.169.0/pictures/"+serviceName+".png' class='center'><br>\n";
 		
+		//next add the table headings
 		userReviews += "<table id='keywords' cellspacing=0 cellpadding=0><thead><tr>\n"
 				    +  "<th><span>Service Name</span></th>\n"
 				    +  "<th><span>User Reviews</span></th>\n"
@@ -194,6 +215,12 @@ public class Review extends HttpServlet {
 		return userReviews;
 	}
 	
+	/**
+	 * Retrieve all the reviews from the database that have been written by this particular user.
+	 *   Sends back as a fully self contained HTML table.
+	 * @param userName the name of the user who's reviews are to be retrieved
+	 * @return the HTML table containing all the user's reviews, as a String
+	 */
 	public static String getReviews(String userName) {
 		//setup the table we'll be working on, the output String and a counter
 		String DB_TABLE    = "review";
@@ -222,18 +249,22 @@ public class Review extends HttpServlet {
 			while(rs.next()) {
 				numUserReviews++;
 				Boolean isStorage = rs.getBoolean("isStorage");
+				
+				//if isStorage is marked true, retrieve service name from the storage_name column
 				if(isStorage) 
 					serviceName = rs.getString("storage_name");
+				//else retrieve service name from the iaas_name column
 				else
 					serviceName = rs.getString("iaas_name");
 				
+				//now make the entire row for this user review
 				userReviews += "<tr><td><img src='http://52.26.169.0/pictures/"+serviceName+".png' class='tinyimage'></td>\n"
 							+  "<td class='littletable'>"+serviceName+"</td>\n"
 							+  "<td class='littletable'>"+rs.getString("text")+"</td>\n"
 							+  "<td class='littletable'>Storage</td>\n</tr>";
-				
 			}
 			
+			//if no reviews were found, print that in the table
 			if(numUserReviews==0)
 				userReviews += "<tr><td colspan=3>No Reviews Found</td></tr>";
 			
@@ -255,48 +286,64 @@ public class Review extends HttpServlet {
 		return userReviews;
 	}
 	
+	/**
+	 * Given an array of Cookie objects, look for one named "CCRserviceName", if it exists return it's value
+	 *   which should be the name of the service provider
+	 * @param cookies an array of Cookie objects
+	 * @return the name of the service contained in the CCRserviceName cookie, or "" if it doesn't exist (as a String)
+	 */
 	private String getServiceName(Cookie[] cookies){
 		String serviceName = "";
 		
 		//look through the array of cookies for one named CCRserviceName
 		if(cookies != null)
 			for(Cookie cookie : cookies) 
+				//if found, set it's value as the String we'll be returning
 				if(cookie.getName().equals("CCRserviceName"))
 					serviceName = cookie.getValue();
 
 		return serviceName;
 	}
 	
+	/**
+	 * Given an array of Cookie objects, look for one named "CCRisStorage", if it exists return it's value
+	 *   which should be a boolean that indicates whether this service provider is storage or IaaS based
+	 * @param cookies an array of Cookie objects
+	 * @return true if the service provider is storage based, false if they are an IaaS provider (boolean)
+	 */
 	private boolean getIsStorage(Cookie[] cookies) {
 		String booleanInsideCookie = "";
 		
 		//look through the array of cookies for one named CCRisStorage
 		if(cookies != null)
 			for(Cookie cookie : cookies) 
+				//if found, grab its value
 				if(cookie.getName().equals("CCRisStorage"))
 					booleanInsideCookie = cookie.getValue();
 		
+		//catch statement that shouldn't occur, but if the cookie is empty return false and print to terminal
 		if(booleanInsideCookie.equals("")){
 			System.out.println("cookie not found in Review, it should have been found");
 			return false;
 		}
 			
-	
+		//cookies contain strings, so if the string was "true" then return a boolean true value
 		if(booleanInsideCookie.equals("true"))
 			return true;
+		//else return a boolean false value
 		else
 			return false;
 	}
 	
 	/**
-     * @see HttpServlet#HttpServlet()
-     */
+	 * boilerplate servlet code
+	 */
     public Review() {
         super();
     }
 
 	/**
-	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
+	 * boilerplate servlet code
 	 */
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		doGet(request,response);

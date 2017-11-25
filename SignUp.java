@@ -23,19 +23,10 @@ public class SignUp extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * Using information from a html form post, attempt to add that user to the
-	 *   mysql database
+	 * Servlet uses information from a html form post to add that user to the mysql database unless they 
+	 *   provide an email address that's already been used. If successful, send them to the home screen
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		//set the file type, print writer, and declare the document html type
-		response.setContentType("text/html;charset=UTF-8");
-		final PrintWriter out=response.getWriter();
-		String docType="<!doctype html public \"-//w3c//dtd html 4.0 transitional//en\">\n";
-		
-		//print out the first bit of html
-		out.println(docType+"<html>\n<head><title>User registration</title></head>\n"
-		                   +"<body>\n <h1 align=\"center\">");
-		
 		//setting up variables passed from the html	form	
 		String name  = request.getParameter("name");
 		String pass  = request.getParameter("password");
@@ -43,42 +34,42 @@ public class SignUp extends HttpServlet {
 		
 		//if the user has already registered with that email, boot them to login screen
 		if(User.isExistingUserEmail(email))
-			response.sendRedirect("http://52.26.169.0/4610.html");
+			Login.messageUserThenRedirectHome(false, name, "that email has already been used.");
 		
-		//db setup
+		//database variables setup, note when writing to DB the DB_URL is different
 		String DB_TABLE = "login";
 		String DB_NAME  = "crr";
 		String DB_URL   = "jdbc:mysql://localhost:3306/"+DB_NAME+"?autoReconnect=true&relaxAutoCommit=true";
-		Connection conn = null;
-		Statement stmt  = null;
+
+		//connection and sql statement setup, taking the performance hit using PreparedStatement to sanitize inputs
+		Connection        conn = null;
+		PreparedStatement pstm = null;
 
 		//try to write the data and close the connection
 		try {
 			//open a connection
 			Class.forName("com.mysql.jdbc.Driver");
-			conn=(Connection) DriverManager.getConnection(DB_URL,"root","ilovepizza");
+			conn = (Connection) DriverManager.getConnection(DB_URL,"root","ilovepizza");
 
 			//create the statement to write the data to the database
-//**** TO DO: add check for existing username first  ****
-			String sql="INSERT INTO "+DB_TABLE+"(name, password, email)"+ 
-					   "VALUES ('"+name+"','"+pass+"','"+email+"');";
+			String sql = "INSERT INTO "+DB_TABLE+"(name, password, email) VALUES (?, ?, ?);";
+			pstm = conn.prepareStatement(sql);
 
-			//taking a performance hit with prepareStatement to sanitize inputs
-			stmt=(Statement) conn.prepareStatement(sql);
+			//sanitize the input: name, password and email
+			pstm.setString(1, name);
+			pstm.setString(2, password);
+			pstm.setString(3, email);
 
 			//send that statement to the db and commit
-			stmt.executeUpdate(sql);
+			pstm.executeUpdate(sql);
 			conn.commit();
 			
-		 	//now that we have all the data sent, print welcome message
-			out.println("<h1><br>Welcome "+name+"</h1><ul>"+
-				        "<b>You're registered with email</b>: "+email+"\n");
 		} catch (ClassNotFoundException | SQLException e) {
-			out.println("<h1>Database Error</h1>");
+			e.printStackTrace();
 		} finally {
 			//finally, attempt close the connection
 			try {
-				if(stmt!=null)
+				if(pstm!=null)
 					conn.close();
 				if(conn!=null)
 					conn.close();
@@ -86,14 +77,21 @@ public class SignUp extends HttpServlet {
 				e.printStackTrace();
 			}
 		}
-		//close out the html tags
-		out.println("</body></html>");
+
+		//print out a message for the user that their account was created and then redirect them to the home page 
+		Login.messageUserThenRedirectHome(true, name, "welcome to CRR.");
 	}
 	
-    public SignUp() {        
-    	super();    
+	/**
+	 * boilerplate servlet code
+	 */
+    public SignUp() {
+        super();
     }
-    
+
+	/**
+	 * boilerplate servlet code
+	 */
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		doGet(request,response);
 	}

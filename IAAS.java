@@ -22,17 +22,18 @@ import javax.servlet.http.HttpServletResponse;
 
 public class IAAS extends HttpServlet {
 	private static final long serialVersionUID = 1L;
-	public String DB_NAME     = "crr";
-	public String DB_URL      = "jdbc:mysql://localhost:3306/"+DB_NAME;
-	public Connection conn = null;
-	public Statement  stmt = null;
-	public PrintWriter out;
+	private String DB_NAME  = "crr";
+	private String DB_URL   = "jdbc:mysql://localhost:3306/"+DB_NAME;
+	private Connection conn = null;
+	private Statement  stmt = null;
+	private PrintWriter out;
 
 	/**
-	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
+	 * Servlet handles displaying all the IaaS service providers. It builds a sortable HTML table that 
+	 *   shows all the IaaS providers along with info about them. The user can click on the providers name
+	 *   and see all the reviews about that provider.
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {		
-		
 		//set the file type and print writer
 		response.setContentType("text/html;charset=UTF-8");
 		out=response.getWriter();
@@ -49,8 +50,6 @@ public class IAAS extends HttpServlet {
 		String DB_TABLE = "iaas";
 		int counter     = 0;
 
-		
-		//connect to the db and read all table rows into array of objects
 		try {
 			//Open a connection
 			Class.forName("com.mysql.jdbc.Driver");
@@ -61,35 +60,34 @@ public class IAAS extends HttpServlet {
 			String sql = "SELECT * FROM "+DB_TABLE+";";
 			ResultSet rs = (ResultSet) stmt.executeQuery(sql);
 			
-			
 			//start the table
-			out.println("<div id='wrapper'>"+ 
-						"<table id='keywords' cellspacing=0 cellpadding=0>"+
-						"<thead><tr>"+
-					    "<th><span>Name</span></th>"+
-					    "<th><span>Lowest Price</span></th>"+
-					    "<th><span>Highest Price</span></th>"+
-			            "<th><span>Min # Cores</span></th>"+
-			            "<th><span>Max # Cores</span></th>"+
-			            "<th><span>Min RAM</span></th>"+
-			            "<th><span>Max RAM</span></th>"+
-			            "<th><span>Min Storage</span></th>"+
-			            "<th><span>Max Storage</span></th>"+
-			            "<th><span>Has GPU</span></th>"+
-			            "<th><span>Operating Systems</span></th></tr></thead>");
+			out.println("<div id='wrapper'>"
+					  + "<table id='keywords' cellspacing=0 cellpadding=0>"
+					  + "<thead><tr>"
+					  + "<th><span>Name</span></th>"
+					  + "<th><span>Lowest Price</span></th>"
+					  + "<th><span>Highest Price</span></th>"
+					  + "<th><span>Min # Cores</span></th>"
+					  + "<th><span>Max # Cores</span></th>"
+					  + "<th><span>Min RAM</span></th>"
+					  + "<th><span>Max RAM</span></th>"
+					  + "<th><span>Min Storage</span></th>"
+					  + "<th><span>Max Storage</span></th>"
+					  + "<th><span>Has GPU</span></th>"
+					  + "<th><span>Operating Systems</span></th></tr></thead>");
 			
-			//initialize the array of IaaS objects
+			//initialize the array of IaaS objects and a temp variable for the providers name
 			Iaas[] iaas = new Iaas[100];
-			String temp;
+			String tempProviderName;
 			
 			//load all the results into an array of IaaS objects
 			while(rs.next()) {
 				//this is used to see if the name is already an object
-				temp=rs.getString("name");
+				tempProviderName=rs.getString("name");
 				
 				//if the name hasn't been added then create new object 
-				if(!findName(iaas, temp, counter)) {
-					iaas[counter] = new Iaas(temp);
+				if(!isExistingNameInIaasArray(iaas, tempProviderName, counter)) {
+					iaas[counter] = new Iaas(tempProviderName);
 					if(rs.getBoolean("hasGPU"))    //this value defaults to false
 						iaas[counter].setHasGPUTrue();
 					iaas[counter].setPriceLow(rs.getFloat("priceLow"));
@@ -111,26 +109,7 @@ public class IAAS extends HttpServlet {
 				}
 			}
 			
-			//Loop through the array of IaaS objects and print each one in the table
-			for(int i=0; i<counter; i++) {
-				out.println("<tr><td>"+
-							"<form action='/4610/Review' method='post'>"+
-							"<input type='hidden' name='name' value="+name+">"+
-							"<input type='hidden' name='isStorage' value='false'>"+
-							"<input type='hidden' name='serviceName' value='"+iaas[i].getIaas()+"'>"+
-							"<button type='submit'>"+iaas[i].getIaas()+"</button></form></td>\n"+
-							"<td>"+iaas[i].getPriceLow()+"</td>\n"+
-							"<td>"+iaas[i].getPriceHigh()+"</td>\n"+
-							"<td>"+iaas[i].getCoresLow()+"</td>\n"+
-							"<td>"+iaas[i].getCoresHigh()+"</td>\n"+
-							"<td>"+iaas[i].getMemLow()+"</td>\n"+
-							"<td>"+iaas[i].getMemHigh()+"</td>\n"+
-							"<td>"+iaas[i].getStorageLow()+"</td>\n"+
-							"<td>"+iaas[i].getStorageHigh()+"</td>\n"+
-							"<td>"+iaas[i].getHasGPUTrue()+"</td>\n"+
-							"<td>"+iaas[i].getOSStrings()+"</td></tr>\n");
-			}
-			out.println("</table>");
+
 			//close all the connections
 	 		if(rs != null)
 	 			rs.close();
@@ -143,18 +122,37 @@ public class IAAS extends HttpServlet {
 			e.printStackTrace();
 		}
 
-		//finally close out the html tags
-		out.println("</td></tr></table></body></html>");
+		//Loop through the array of IaaS objects and print each one in the table
+		for(int i=0; i<counter; i++) 
+			out.println("<tr><td>"
+					  +	"<form action='/4610/Review' method='post'>"
+					  + "<input type='hidden' name='name' value="+name+">"
+					  + "<input type='hidden' name='isStorage' value='false'>"
+					  + "<input type='hidden' name='serviceName' value='"+iaas[i].getIaas()+"'>"
+					  + "<button type='submit'>"+iaas[i].getIaas()+"</button></form></td>\n"
+					  + "<td>"+iaas[i].getPriceLow()+"</td>\n"
+					  + "<td>"+iaas[i].getPriceHigh()+"</td>\n"
+					  + "<td>"+iaas[i].getCoresLow()+"</td>\n"
+					  + "<td>"+iaas[i].getCoresHigh()+"</td>\n"
+					  + "<td>"+iaas[i].getMemLow()+"</td>\n"
+					  + "<td>"+iaas[i].getMemHigh()+"</td>\n"
+					  + "<td>"+iaas[i].getStorageLow()+"</td>\n"
+					  + "<td>"+iaas[i].getStorageHigh()+"</td>\n"
+					  + "<td>"+iaas[i].getHasGPUTrue()+"</td>\n"
+					  + "<td>"+iaas[i].getOSStrings()+"</td></tr>\n");
+
+		//finally close out the little and big table, and the html tags
+		out.println("</table></td></tr></table></body></html>");
 	}
 	
 	/**
 	 * look through all the iaas objects for a name, return true if found otherwise return false
 	 * @param iaas the array of iaas objects
 	 * @param name the name we're looking for
-	 * @param counter the number of 
+	 * @param counter the number of IaaS objects in this IaaS array
 	 * @return true if the name is found, otherwise false
 	 */
-	public boolean findName(Iaas[] iaas, String name, int counter) {
+	public boolean isExistingNameInIaasArray(Iaas[] iaas, String name, int counter) {
 		for(int i=0; i<counter; i++) 
 			if(iaas[i].getIaas().equals(name))
 				return true;
@@ -178,61 +176,103 @@ public class IAAS extends HttpServlet {
 		 */
 		public Iaas(String iaasName) {
 			this.iaasName=iaasName;
-			this.numOs=-1;
+			//this is an array indexer, it will start at 0 as soon as an OS is added
+			this.numOs=-1; 
 			this.hasGPU=false;
 		}
 		
+		/**
+		 * Set to true if the IaaS provider has a GPU equipped service (it's defaulted to false)
+		 */
 		public void setHasGPUTrue() {
 			this.hasGPU=true;
 		}
 		
+		/**
+		 * Set's the lowest price this IaaS provider has
+		 * @param priceLow the lowest price as a float
+		 */
 		public void setPriceLow(float priceLow) {
 			this.priceLow=priceLow;
 		}
 		
+		/**
+		 * Set's the highest price this IaaS provider has
+		 * @param priceHigh the highest price as a float
+		 */
 		public void setPriceHigh(float priceHigh) {
 			this.priceHigh=priceHigh;
 		}
 		
+		/**
+		 * Set's the least amount of RAM this IaaS provider has
+		 * @param memLow the lowest RAM as a float
+		 */
 		public void setMemLow(float memLow) {
 			this.memLow=memLow;
 		}
 		
+		/**
+		 * Set's the most amount of RAM this IaaS provider has
+		 * @param memHigh the highest RAM as a float
+		 */
 		public void setMemHigh(float memHigh) {
 			this.memHigh=memHigh;
 		}
 		
+		/**
+		 * Set's the least number of available CPU's this IaaS provider has
+		 * @param coresLow the least number of cores as an int
+		 */
 		public void setCoresLow(int coresLow) {
 			this.coresLow=coresLow;
 		}
 
+		/**
+		 * Set's the most number of available CPU's this IaaS provider has
+		 * @param coresHigh the most number of cores as an int
+		 */
 		public void setCoresHigh(int coresHigh) {
 			this.coresHigh=coresHigh;
 		}
 		
+		/**
+		 * Set's the lowest storage this IaaS provider has
+		 * @param the least storage as an int
+		 */
 		public void setStorageLow(int storageLow) {
 			this.storageLow=storageLow;
 		}
 		
+		/**
+		 * Set's the highest storage this IaaS provider has
+		 * @param the most storage as an int
+		 */
 		public void setStorageHigh(int storageHigh) {
 			this.storageHigh=storageHigh;
 		}
 		
 		/**
 		 * add the OS Name and Version to the IaaS object and increment the counter 
+		 *   by looking through the 'os' table for a matching unique OS id
 		 * @param os_id the unique OS id number
 		 */
 		public void addOS(int os_id) {
 			try {
+				//adding the first OS starts the array index at 0
 				numOs++;
+
 				//create the SQL statement to look for the os_id (unique)
 				Statement stmtOs = (Statement) conn.createStatement();
 				String sql = "SELECT * FROM os WHERE id="+os_id+";";
-				//set the string to be the OS Name and OS Version
 				ResultSet rsOs = (ResultSet) stmtOs.executeQuery(sql);
+
+				//since it's a unique ID #, only one result to look at 
 				rsOs.next();
+
 				//write the result of the query to the iaas object
 				this.osNameAndVer[numOs]=rsOs.getString("name")+" "+rsOs.getString("version");
+
 				//finally close the resultset and statement
 				if(rsOs!=null)
 					rsOs.close();
@@ -244,10 +284,18 @@ public class IAAS extends HttpServlet {
 			}
 		}
 
+		/**
+		 * Retrieve this IaaS providers name
+		 * @return the providers name as a String
+		 */
 		public String getIaas() {
 			return iaasName;
 		}
 		
+		/**
+		 * Retrieve if this IaaS provider has a GPU enabled service
+		 * @return true if this provider has GPU, otherwise false
+		 */
 		public String getHasGPUTrue() {
 			if(hasGPU)
 				return "X";
@@ -255,43 +303,74 @@ public class IAAS extends HttpServlet {
 				return " ";
 		}
 		
+		/**
+		 * Retrieve this IaaS providers lowest price service
+		 * @return the lowest price service as a String
+		 */
 		public String getPriceLow() {
 			return "$"+priceLow+"/min";
 		}
 		
+		/**
+		 * Retrieve this IaaS providers highest price service
+		 * @return the highest price service as a String
+		 */
 		public String getPriceHigh() {
 			return "$"+priceHigh+"/min";
 		}
 		
+		/**
+		 * Retrieve this IaaS providers lowest RAM service
+		 * @return the lowest RAM service as a String
+		 */
 		public String getMemLow() {
 			return ""+memLow+"GB";
 		}
 		
+		/**
+		 * Retrieve this IaaS providers highest RAM service
+		 * @return the highest RAM service as a String
+		 */
 		public String getMemHigh() {
 			return ""+memHigh+"GB";
 		}
 		
+		/**
+		 * Retrieve this IaaS providers lowest number of CPU cores
+		 * @return the lowest number of CPU cores as an int
+		 */
 		public int getCoresLow() {
 			return coresLow;
 		}
 
+		/**
+		 * Retrieve this IaaS providers highest number of CPU cores
+		 * @return the highest number of CPU cores as an int
+		 */
 		public int getCoresHigh() {
 			return coresHigh;
 		}
 		
+		/**
+		 * Retrieve this IaaS providers lowest amount of disk storage
+		 * @return the lowest amount of disk storage as a String
+		 */
 		public String getStorageLow() {
 			return ""+storageLow+"GB";
 		}
 		
+		/**
+		 * Retrieve this IaaS providers highest amount of disk storage
+		 * @return the highest amount of disk storage as a String
+		 */
 		public String getStorageHigh() {
 			return ""+storageHigh+"GB";
 		}
 		
 		/**
-		 * combines all the OS Names and Versions and returns them as a big String
+		 * combines all the OS Names and Versions and returns them as a big comma delimited String
+		 *   (note: numOS is the array indexer, so it starts at 0)
 		 * @return all the OS Names and Versions as a String
-		 * num0s 0 = 1 result
-		 *       1 = 2 results
 		 */
 		public String getOSStrings() {
 			String temp="";
@@ -301,15 +380,15 @@ public class IAAS extends HttpServlet {
 		}
 	}
 	
-    /**
-     * @see HttpServlet#HttpServlet()
-     */
+	/**
+	 * boilerplate servlet code
+	 */
     public IAAS() {
         super();
     }
-	
+
 	/**
-	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse response)
+	 * boilerplate servlet code
 	 */
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		doGet(request,response);
